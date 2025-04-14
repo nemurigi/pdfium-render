@@ -4,6 +4,7 @@
 use crate::bindgen::{FPDF_DOCUMENT, FPDF_PAGE, FPDF_TEXTPAGE, FS_MATRIX, FS_RECTF};
 use crate::bindings::PdfiumLibraryBindings;
 use crate::error::{PdfiumError, PdfiumInternalError};
+use crate::pdf::matrix::PdfMatrix;
 use crate::pdf::color::PdfColor;
 use crate::pdf::document::page::object::text::PdfPageTextRenderMode;
 use crate::pdf::document::page::text::chars::PdfPageTextCharIndex;
@@ -543,7 +544,7 @@ impl<'a> PdfPageTextChar<'a> {
     }
 
     /// Returns the current raw transformation matrix for this character.
-    fn matrix(&self) -> Result<FS_MATRIX, PdfiumError> {
+    fn matrix(&self) -> Result<PdfMatrix, PdfiumError> {
         let mut matrix = FS_MATRIX {
             a: 0.0,
             b: 0.0,
@@ -553,13 +554,16 @@ impl<'a> PdfPageTextChar<'a> {
             f: 0.0,
         };
 
-        if self.bindings().is_true(self.bindings().FPDFText_GetMatrix(
+        let result = self.bindings().FPDFText_GetMatrix(
             self.text_page_handle(),
             self.index,
             &mut matrix,
-        )) {
-            Ok(matrix)
+        );
+
+        if self.bindings().is_true(result) {
+            Ok(PdfMatrix::from_pdfium(matrix))
         } else {
+            // Consider returning a more specific error if possible, based on PDFium documentation or error codes.
             Err(PdfiumError::PdfiumLibraryInternalError(
                 PdfiumInternalError::Unknown,
             ))
@@ -579,7 +583,7 @@ impl<'a> PdfPageTextChar<'a> {
     #[inline]
     pub fn get_horizontal_translation(&self) -> PdfPoints {
         self.matrix()
-            .map(|matrix| PdfPoints::new(matrix.e))
+            .map(|matrix| PdfPoints::new(matrix.e()))
             .unwrap_or(PdfPoints::ZERO)
     }
 
@@ -587,7 +591,7 @@ impl<'a> PdfPageTextChar<'a> {
     #[inline]
     pub fn get_vertical_translation(&self) -> PdfPoints {
         self.matrix()
-            .map(|matrix| PdfPoints::new(matrix.f))
+            .map(|matrix| PdfPoints::new(matrix.f()))
             .unwrap_or(PdfPoints::ZERO)
     }
 
@@ -600,13 +604,13 @@ impl<'a> PdfPageTextChar<'a> {
     /// Returns the current horizontal scale factor applied to this character.
     #[inline]
     pub fn get_horizontal_scale(&self) -> f64 {
-        self.matrix().map(|matrix| matrix.a).unwrap_or(0.0) as f64
+        self.matrix().map(|matrix| matrix.a()).unwrap_or(0.0) as f64
     }
 
     /// Returns the current vertical scale factor applied to this character.
     #[inline]
     pub fn get_vertical_scale(&self) -> f64 {
-        self.matrix().map(|matrix| matrix.d).unwrap_or(0.0) as f64
+        self.matrix().map(|matrix| matrix.d()).unwrap_or(0.0) as f64
     }
 
     /// Returns the counter-clockwise rotation applied to this character, in degrees.
@@ -634,7 +638,7 @@ impl<'a> PdfPageTextChar<'a> {
     #[inline]
     pub fn get_rotation_counter_clockwise_radians(&self) -> f32 {
         self.matrix()
-            .map(|matrix| matrix.b.atan2(matrix.a))
+            .map(|matrix| matrix.b().atan2(matrix.a()))
             .unwrap_or(0.0)
     }
 
@@ -695,7 +699,7 @@ impl<'a> PdfPageTextChar<'a> {
     /// the combined operation.
     #[inline]
     pub fn get_x_axis_skew_radians(&self) -> f32 {
-        self.matrix().map(|matrix| matrix.b.atan()).unwrap_or(0.0)
+        self.matrix().map(|matrix| matrix.b().atan()).unwrap_or(0.0)
     }
 
     /// Returns the current y axis skew applied to this character, in radians.
@@ -704,7 +708,7 @@ impl<'a> PdfPageTextChar<'a> {
     /// the combined operation.
     #[inline]
     pub fn get_y_axis_skew_radians(&self) -> f32 {
-        self.matrix().map(|matrix| matrix.c.atan()).unwrap_or(0.0)
+        self.matrix().map(|matrix| matrix.c().atan()).unwrap_or(0.0)
     }
 
     /// Returns the origin x and y positions of this character relative to its containing page.
