@@ -31,6 +31,7 @@ use crate::pdf::document::page::objects::PdfPageObjects;
 use crate::pdf::document::page::PdfPageObjectOwnership;
 use crate::pdf::document::PdfDocument;
 use crate::pdf::matrix::{PdfMatrix, PdfMatrixValue};
+use crate::pdf::path::clip_path::PdfClipPath;
 use crate::pdf::points::PdfPoints;
 use crate::pdf::quad_points::PdfQuadPoints;
 use crate::pdf::rect::PdfRect;
@@ -525,6 +526,21 @@ impl<'a> PdfPageObject<'a> {
 
     // The get_matrix_impl() function required by the create_transform_getters!() macro
     // is provided by the PdfPageObjectPrivate trait.
+
+    pub fn get_clip_path(&self) -> Option<PdfClipPath> {
+        let path_handle = self
+            .bindings()
+            .FPDFPageObj_GetClipPath(self.object_handle());
+        if path_handle.is_null() {
+            return None;
+        }
+
+        return Some(PdfClipPath::from_pdfium(
+            path_handle,
+            self.ownership().clone(),
+            self.bindings(),
+        ));
+    }
 }
 
 /// Functionality common to all [PdfPageObject] objects, regardless of their [PdfPageObjectType].

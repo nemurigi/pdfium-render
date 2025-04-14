@@ -3,6 +3,7 @@
 use crate::bindgen::FPDF_CLIPPATH;
 use crate::bindings::PdfiumLibraryBindings;
 use crate::error::{PdfiumError, PdfiumInternalError};
+use crate::pdf::document::page::object::ownership::PdfPageObjectOwnership;
 use crate::pdf::path::segment::PdfPathSegment;
 use crate::pdf::path::segments::{PdfPathSegmentIndex, PdfPathSegments, PdfPathSegmentsIterator};
 use std::convert::TryInto;
@@ -20,12 +21,34 @@ pub struct PdfClipPath<'a> {
     // each of which can return a PdfClipPathSegments object
     handle: FPDF_CLIPPATH,
     bindings: &'a dyn PdfiumLibraryBindings,
+    ownership: PdfPageObjectOwnership,
 }
 
 impl<'a> PdfClipPath<'a> {
+    pub(crate) fn from_pdfium(
+        path_handle: FPDF_CLIPPATH,
+        ownership: PdfPageObjectOwnership,
+        bindings: &'a dyn PdfiumLibraryBindings,
+    ) -> Self {
+        Self {
+            handle: path_handle,
+            bindings,
+            ownership,
+        }
+    }
+
     #[inline]
     pub fn bindings(&self) -> &'a dyn PdfiumLibraryBindings {
         self.bindings
+    }
+
+    /// Returns the number of paths inside this [PdfClipPath] instance
+    pub fn len(&self) -> i32 {
+        self.bindings.FPDFClipPath_CountPaths(self.handle) as i32
+    }
+
+    pub fn get_segments(&self, path_index: i32) -> PdfClipPathSegments<'a> {
+        PdfClipPathSegments::from_pdfium(self.handle, path_index, self.bindings)
     }
 }
 
@@ -33,7 +56,11 @@ impl<'a> Drop for PdfClipPath<'a> {
     /// Closes this [PdfClipPath], releasing held memory.
     #[inline]
     fn drop(&mut self) {
-        self.bindings.FPDF_DestroyClipPath(self.handle)
+        // clip-paths returned using FPDFPageObj_GetClipPath, should not free their memory
+        // or pdfium will segfault
+        if !self.ownership.is_owned() {
+            self.bindings.FPDF_DestroyClipPath(self.handle)
+        }
     }
 }
 
