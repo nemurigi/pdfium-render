@@ -135,9 +135,9 @@ impl<'a> PdfFontGlyphs<'a> {
 
     /// Returns a single [PdfFontGlyph] from this [PdfFontGlyphs] collection.
     pub fn get(&self, index: PdfFontGlyphIndex) -> Result<PdfFontGlyph<'a>, PdfiumError> {
-        if index >= self.len() {
-            return Err(PdfiumError::FontGlyphIndexOutOfBounds);
-        }
+        // if index >= self.len() {
+        //     return Err(PdfiumError::FontGlyphIndexOutOfBounds);
+        // }
 
         Ok(PdfFontGlyph::from_pdfium(self.handle, index, self.bindings))
     }
