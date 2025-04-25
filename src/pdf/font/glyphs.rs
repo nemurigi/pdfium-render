@@ -13,7 +13,7 @@ use std::os::raw::c_uint;
 use crate::pdf::font::PdfFont;
 
 /// The zero-based index of a single [PdfFontGlyph] inside its containing [PdfFontGlyphs] collection.
-pub type PdfFontGlyphIndex = u32;
+pub type PdfFontGlyphIndex = u16;
 
 /// A collection of all the [PdfFontGlyph] objects in a [PdfFont].
 pub struct PdfFontGlyphs<'a> {
@@ -45,7 +45,7 @@ impl<'a> PdfFontGlyphs<'a> {
             // as possible.
 
             let len = self
-                .find_maximum_valid_glyph_index(u32::MIN, u32::MAX)
+                .find_maximum_valid_glyph_index(u16::MIN, u16::MAX)
                 .unwrap_or(0);
 
             self.len.replace(Some(len));
@@ -53,7 +53,7 @@ impl<'a> PdfFontGlyphs<'a> {
     }
 
     /// Returns the highest index position of an extant glyph within the given index range.
-    fn find_maximum_valid_glyph_index(&self, min: u32, max: u32) -> Option<u32> {
+    fn find_maximum_valid_glyph_index(&self, min: u16, max: u16) -> Option<u16> {
         // Exit immediately if the maximum valid glyph index lies outside the given index boundaries.
 
         if !self
